@@ -4,6 +4,8 @@
 
 namespace nk {
     ENUM(TokenType, (
+        INVALID,
+
         LEFT_PAREN,
         RIGHT_PAREN,
         LEFT_BRACE,
@@ -13,6 +15,9 @@ namespace nk {
 
         SEMICOLON,
         NOT,
+
+        SLASH,
+        SLASH_EQUAL,
 
         STAR,
         STAR_EQUAL,
@@ -44,9 +49,6 @@ namespace nk {
         PLUS,
         PLUS_PLUS,
         PLUS_EQUAL,
-
-        SLASH,
-        SLASH_EQUAL,
 
         IDENTIFIER,
         STRING,
@@ -86,6 +88,12 @@ namespace nk {
 
     class Token {
     public:
+        Token()
+            : m_type{TokenType::INVALID},
+              m_line{u64_max},
+              m_start{u64_max},
+              m_end{u64_max} {}
+
         Token(TokenType type, const u64 line, const u64 start, const u64 end)
             : m_type{type},
               m_line{line},
@@ -98,6 +106,7 @@ namespace nk {
 
         u64 start() const { return m_start; }
         u64 end() const { return m_end; }
+        u64 length() const { return m_end - m_start; }
 
     private:
         TokenType m_type;

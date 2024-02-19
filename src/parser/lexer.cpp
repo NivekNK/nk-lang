@@ -3,211 +3,266 @@
 #include "parser/lexer.h"
 
 #include "memory/malloc_allocator.h"
-#include "parser/report.h"
 #include "parser/token_keyword_map.h"
 
 namespace nk {
-    Lexer::Lexer(str source)
-        : m_source{source},
-          m_allocator{new MallocAllocator()},
-          m_tokens{m_allocator, 100} {
+    Lexer::Lexer(str& source)
+        : m_source{std::move(source).data(), source.length(), true},
+          m_allocator{new MallocAllocator()} {
+        read_character();
     }
 
     Lexer::~Lexer() {
-        m_tokens.free();
         delete m_allocator;
     }
 
-    Arr<Token> Lexer::scan_tokens() {
-        while (!end_of_file()) {
-            m_start = m_current;
-            scan_token();
-        }
-
-        m_tokens.push({TokenType::END_OF_FILE, m_line, m_source.length(), m_source.length()});
-        return m_tokens;
-    }
-
     void Lexer::pretty_print() {
-        auto tokens = scan_tokens();
-        for (Token token : tokens) {
+        TokenType current = TokenType::INVALID;
+        DebugLog("Here");
+        while (current != TokenType::END_OF_FILE) {
+            DebugLog("Here");
+            auto token = next_token();
+            DebugLog("Here");
+            vstr lexeme{m_source.data() + token.start(), token.end() - token.start()};
             DebugLog("Type: {} | Line: {} | Lexeme: {}",
-                TokenTypeImpl::string(token.type()), token.line(), m_source.substr(token.start(), token.end() - token.start()));
+                TokenTypeImpl::string(token.type()), token.line(), lexeme);
+            DebugLog("Here");
+            current = token.type();
+            break;
         }
     }
 
-    void Lexer::identifier_or_keyword() {
-        while (is_alpha_numeric(peek()))
-            advance();
+    Token Lexer::next_token() {
+        Token token;
 
-        str value = m_source.substr(m_start, m_current - m_start);
-        if (auto keyword = TokenKeywordMap::is_valid_keyword(value.c_str(), value.length())) {
-            add_token(keyword->type);
-            return;
+        //skip_whitespace();
+        //skip_comments();
+
+        m_start = m_current;
+
+        switch (m_character) {
+            case 0:
+                return create_token(TokenType::END_OF_FILE);
+
+            case '(':
+                token = create_token(TokenType::LEFT_PAREN);
+                break;
+            case ')':
+                token = create_token(TokenType::RIGHT_PAREN);
+                break;
+            case '{':
+                token = create_token(TokenType::LEFT_BRACE);
+                break;
+            case '}':
+                token = create_token(TokenType::RIGHT_BRACE);
+                break;
+            case '[':
+                token = create_token(TokenType::LEFT_BRACKET);
+                break;
+            case ']':
+                token = create_token(TokenType::RIGHT_BRACKET);
+                break;
+            case ';':
+                token = create_token(TokenType::SEMICOLON);
+                break;
+            case '~':
+                token = create_token(TokenType::NOT);
+                break;
+            case '/':
+                token = create_match_token('=', TokenType::SLASH_EQUAL, TokenType::SLASH);
+                break;
+            case '*':
+                token = create_match_token('=', TokenType::STAR_EQUAL, TokenType::STAR);
+                break;
+            case '!':
+                token = create_match_token('=', TokenType::BANG_EQUAL, TokenType::BANG);
+                break;
+            case '=':
+                token = create_match_token('=', TokenType::EQUAL_EQUAL, TokenType::EQUAL);
+                break;
+            case '^':
+                token = create_match_token('=', TokenType::XOR_EQUAL, TokenType::XOR);
+                break;
+            case ':':
+                if (match_character(':')) {
+                    token = create_token(TokenType::COLON_COLON);
+                } else {
+                    token = create_match_token('=', TokenType::COLON_EQUAL, TokenType::COLON);
+                }
+                break;
+            case '&':
+                if (match_character('&')) {
+                    token = create_token(TokenType::AND_AND);
+                } else {
+                    token = create_match_token('=', TokenType::AND_EQUAL, TokenType::AND);
+                }
+                break;
+            case '|':
+                if (match_character('|')) {
+                    token = create_token(TokenType::OR_OR);
+                } else {
+                    token = create_match_token('=', TokenType::OR_EQUAL, TokenType::OR);
+                }
+                break;
+            case '<':
+                if (match_character('<')) {
+                    token = create_token(TokenType::LEFT_SHIFT);
+                } else {
+                    token = create_match_token('=', TokenType::LESS_EQUAL, TokenType::LESS);
+                }
+                break;
+            case '>':
+                if (match_character('>')) {
+                    token = create_token(TokenType::RIGHT_SHIFT);
+                } else {
+                    token = create_match_token('=', TokenType::GREATER_EQUAL, TokenType::GREATER);
+                }
+                break;
+            case '-':
+                if (match_character('-')) {
+                    token = create_token(TokenType::MINUS_MINUS);
+                } else {
+                    token = create_match_token('=', TokenType::MINUS_EQUAL, TokenType::MINUS);
+                }
+                break;
+            case '+':
+                if (match_character('+')) {
+                    token = create_token(TokenType::PLUS_PLUS);
+                } else {
+                    token = create_match_token('=', TokenType::PLUS_EQUAL, TokenType::PLUS);
+                }
+                break;
+            case '"':
+                token = create_string_token();
+                break;
+            default:
+                if (is_numeric(m_character)) {
+                    token = create_id_or_number_token();
+                } else if (is_alpha(m_character)) {
+                    token = create_id_or_keyword_token();
+                }
+                break;
         }
 
-        add_token(TokenType::IDENTIFIER);
+        read_character();
+        return token;
     }
 
-    void Lexer::identifier_or_number() {
-        while (is_digit(peek()))
-            advance();
-
-        if (is_alpha(peek())) {
-            identifier_or_keyword();
+    void Lexer::read_character() {
+        if (m_next >= m_source.length()) {
+            m_character = 0;
+            m_current = m_source.length();
             return;
         }
 
-        if (peek() == '.' && is_digit(peek_next())) {
-            advance();
-
-            while(is_digit(peek()))
-                advance();
-
-            add_token(TokenType::FLOATING_POINT);
-            return;
-        }
-
-        add_token(TokenType::INTEGER);
+        m_character = m_source[m_next];
+        m_current = m_next;
+        m_next++;
     }
 
-    void Lexer::string() {
-        while (peek() != '"' && !end_of_file()) {
-            if (peek() == '\n')
+    bool Lexer::end_of_file() const {
+        return m_current >= m_source.length();
+    }
+
+    bool Lexer::match_character(const char expected) {
+        if (end_of_file() && expected != 0)
+            return false;
+
+        if (m_source[m_next] != expected)
+            return false;
+
+        read_character();
+        return true;
+    }
+
+    char Lexer::peek_next_character() {
+        if (m_next >= m_source.length())
+            return 0;
+
+        return m_source[m_next];
+    }
+
+    void Lexer::skip_whitespace() {
+        while (m_character == ' ' || m_character == '\t' || m_character == '\r' || m_character == '\n') {
+            if (m_character == '\n')
                 m_line++;
-            advance();
+            read_character();
+        }
+    }
+
+    void Lexer::skip_comments() {
+        while (m_character == '/' && match_character('/')) {
+            while(m_character != '\n' && !end_of_file())
+                read_character();
+
+            if (!end_of_file()) {
+                read_character();
+                m_line++;
+            }
+        }
+    }
+
+    Token Lexer::create_token(const TokenType type) const {
+        return {type, m_line, m_start, m_next};
+    }
+
+    Token Lexer::create_match_token(const char expected, const TokenType expected_type, const TokenType current_type) {
+        if (match_character(expected))
+            return create_token(expected_type);
+
+        return create_token(current_type);
+    }
+
+    Token Lexer::create_string_token() {
+        while (m_current != '"' && !end_of_file()) {
+            if (m_current == '\n')
+                m_line++;
+            read_character();
         }
 
         if (end_of_file()) {
             // TODO: Error unterminated string.
-            return;
+            return {};
         }
 
-        advance();
-        m_tokens.push({TokenType::STRING, m_line, m_start + 1, m_current - 1});
+        return {TokenType::STRING, m_line, m_start + 1, m_current};
     }
 
-    bool Lexer::match(const char expected) {
-        if (end_of_file() || m_source[m_current] != expected)
-            return false;
+    Token Lexer::create_id_or_number_token() {
+        while (is_numeric(m_current))
+            read_character();
 
-        m_current++;
-        return true;
-    }
-
-    void Lexer::add_token(const TokenType type) {
-        m_tokens.push({type, m_line, m_start, m_current});
-    }
-
-    void Lexer::add_match_token(const char expected, const TokenType expected_type, const TokenType current_type) {
-        if (match(expected)) {
-            add_token(expected_type);
-            return;
+        if (is_alpha(m_current)) {
+            return create_id_or_keyword_token();
         }
-        add_token(current_type);
+
+        if (m_current == '.' && is_numeric(peek_next_character())) {
+            read_character();
+
+            while(is_numeric(m_current))
+                read_character();
+
+            return create_token(TokenType::FLOATING_POINT);
+        }
+
+        return create_token(TokenType::INTEGER);
     }
 
-    void Lexer::scan_token() {
-        char c = advance();
-        switch (c) {
-            case '(': add_token(TokenType::LEFT_PAREN); break;
-            case ')': add_token(TokenType::RIGHT_PAREN); break;
-            case '{': add_token(TokenType::LEFT_BRACE); break;
-            case '}': add_token(TokenType::RIGHT_BRACE); break;
-            case '[': add_token(TokenType::LEFT_BRACKET); break;
-            case ']': add_token(TokenType::RIGHT_BRACKET); break;
-            case ';': add_token(TokenType::SEMICOLON); break;
-            case '~': add_token(TokenType::NOT); break;
-            case '*':
-                add_match_token('=', TokenType::STAR_EQUAL, TokenType::STAR);
-                break;
-            case '!':
-                add_match_token('=', TokenType::BANG_EQUAL, TokenType::BANG);
-                break;
-            case '=':
-                add_match_token('=', TokenType::EQUAL_EQUAL, TokenType::EQUAL);
-                break;
-            case '^':
-                add_match_token('=', TokenType::XOR_EQUAL, TokenType::XOR);
-                break;
-            case ':':
-                if (match(':')) {
-                    add_token(TokenType::COLON_COLON);
-                } else {
-                    add_match_token('=', TokenType::COLON_EQUAL, TokenType::COLON);
-                }
-                break;
-            case '&':
-                if (match('&')) {
-                    add_token(TokenType::AND_AND);
-                } else {
-                    add_match_token('=', TokenType::AND_EQUAL, TokenType::AND);
-                }
-                break;
-            case '|':
-                if (match('|')) {
-                    add_token(TokenType::OR_OR);
-                } else {
-                    add_match_token('=', TokenType::OR_EQUAL, TokenType::OR);
-                }
-                break;
-            case '<':
-                if (match('<')) {
-                    add_token(TokenType::LEFT_SHIFT);
-                } else {
-                    add_match_token('=', TokenType::LESS_EQUAL, TokenType::LESS);
-                }
-                break;
-            case '>':
-                if (match('>')) {
-                    add_token(TokenType::RIGHT_SHIFT);
-                } else {
-                    add_match_token('=', TokenType::GREATER_EQUAL, TokenType::GREATER);
-                }
-                break;
-            case '-':
-                if (match('-')) {
-                    add_token(TokenType::MINUS_MINUS);
-                } else {
-                    add_match_token('=', TokenType::MINUS_EQUAL, TokenType::MINUS);
-                }
-                break;
-            case '+':
-                if (match('+')) {
-                    add_token(TokenType::PLUS_PLUS);
-                } else {
-                    add_match_token('=', TokenType::PLUS_EQUAL, TokenType::PLUS);
-                }
-                break;
-            case '/':
-                if (match('/')) {
-                    while(peek() != '\n' && !end_of_file())
-                        advance();
-                } else {
-                    add_match_token('=', TokenType::SLASH_EQUAL, TokenType::SLASH);
-                }
-                break;
+    Token Lexer::create_id_or_keyword_token() {
+        while (is_alpha_numeric(m_current))
+            read_character();
 
-            case ' ':
-            case '\r':
-            case '\t':
-                break;
+        const u64 length = m_current - m_start;
+        char* buffer = m_allocator->allocate<char>(length);
+        std::memcpy(buffer, &m_source.data()[m_start], length - 1);
+        buffer[length - 1] = '\0';
 
-            case '\n':
-                m_line++;
-                break;
-
-            case '"': string(); break;
-
-            default:
-                if (is_digit(c)) {
-                    identifier_or_number();
-                } else if (is_alpha(c)) {
-                    identifier_or_keyword();
-                } else {
-                    // TODO: Error Unexpected character
-                }
-                break;
+        if (auto keyword = TokenKeywordMap::is_valid_keyword(buffer, length)) {
+            m_allocator->free<char>(buffer, length);
+            return create_token(keyword->type);
         }
+
+        m_allocator->free<char>(buffer, length);
+        return create_token(TokenType::IDENTIFIER);
     }
 }

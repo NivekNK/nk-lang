@@ -16,6 +16,7 @@ namespace nk {
 
     using szt = size_t;
     using str = std::string;
+    using vstr = std::string_view;
     using cstr = const char*;
 
     static constexpr const u8 u8_max = UINT8_MAX;

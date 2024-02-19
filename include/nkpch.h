@@ -9,6 +9,7 @@
 
 // String manipulation
 #include <string>
+#include <cstring>
 #include <format>
 
 // Types

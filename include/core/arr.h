@@ -10,13 +10,18 @@ namespace nk {
     template <typename T>
     class Arr {
     public:
-        Arr(T* data, const u64 length)
-            : m_data{data}, m_length{length} {
+        Arr(T* data, const u64 length, bool own_data)
+            : m_data{data}, m_length{length}, m_own_data{own_data} {
         }
 
         template <IDyarr<T> D>
         Arr(D& dyarr)
             : m_data{dyarr.data()}, m_length{dyarr.length()} {
+        }
+
+        ~Arr() {
+            if (m_own_data && m_data != nullptr)
+                free();
         }
 
         T& operator[](const u64 index) {
@@ -29,7 +34,10 @@ namespace nk {
             return m_data[index];
         }
 
+        T* data() { return m_data; }
         u64 length() const { return m_length; }
+
+        void free() { std::free(m_data); }
 
         struct Iterator {
         public:
@@ -73,5 +81,6 @@ namespace nk {
     private:
         T* m_data = nullptr;
         u64 m_length = 0;
+        bool m_own_data = false;
     };
 }

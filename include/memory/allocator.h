@@ -14,8 +14,23 @@ namespace nk {
         virtual ~Allocator();
 
         template <typename T>
-        constexpr inline T* allocate(const u64 lot = 1) {
+        inline T* allocate() {
+            return static_cast<T*>(allocate(sizeof(T), alignof(T)));
+        }
+
+        template <typename T>
+        inline T* allocate_lot(const u64 lot) {
             return static_cast<T*>(allocate(sizeof(T) * lot, alignof(T)));
+        }
+
+        template <typename T>
+        inline void free(T* ptr) {
+            free(ptr, sizeof(T));
+        }
+
+        template <typename T>
+        inline void free_lot(T* ptr, const u64 lot) {
+            free(ptr, lot * sizeof(T));
         }
 
         template <typename T, typename... Args>
