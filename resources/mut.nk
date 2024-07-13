@@ -1,0 +1,39 @@
+mut_test: func() {
+    {
+        // This value can't be modified and its read only.
+        int_value: u32 = 4;
+
+        int_value = 5; // Error
+    }
+    {
+        // This value can be modified.
+        int_value: mut u32 = 4;
+
+        int_value = 5; // Works
+    }
+    {
+        // This value can't be modified after its initialized.
+        uninitialied_int: u32;
+
+        if bool_value {
+            // Initialize the value if "bool_value" its true.
+            uninitialied_int = 8; // Works
+        }
+        else {
+            // Initialize the value if "bool_value" its false.
+            uninitialied_int = 7; // Works
+        }
+
+        uninitialied_int = 5; // Error
+    }
+    {
+        // If the variable its not initialized, its initialized
+        // to its default value, 0 in this case.
+        zero_initialized_int: u32;
+
+        // Warn constant its not initialized.
+        if (zero_initialized_int == 0) {
+            println("its zero!");
+        }
+    }
+}

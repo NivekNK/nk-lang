@@ -1,0 +1,19 @@
+main: func() {
+    println("Hello world!");
+}
+
+main: func(args: str[]) {
+    for i := 0; i < args.len; i++ {
+        println(args[i]);
+    }
+}
+
+main: func(args: str[]) {
+    for arg := args {
+        println(arg);
+    }
+}
+
+main: func()! {
+    error_early_return()!;
+}

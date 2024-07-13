@@ -1,0 +1,18 @@
+string_handling: func() {
+    {
+        // A string allocated in read only memory.
+        my_string: str = "Hello world!";
+    }
+    {
+        // Mutable string;
+        my_string: mut str = "mutable string";
+        my_string += "more string" +
+                     "even more string";
+    }
+    {
+        // TODO: Expand with more formatting options.
+        // Formatted string
+        number: u32 = 1;
+        my_string: str = $"number is: {number}";
+    }
+}

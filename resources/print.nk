@@ -1,0 +1,18 @@
+print_to_screen: func() {
+    // Prints on new line.
+    println("new line");
+
+    // Prints in the same line.
+    print("text");
+
+    // Prints a formatted string.
+    println($"number: {2.3}");
+
+    // Prints text formatted with its own color and hour.
+    // TODO: expand functionality with settings.
+    debug("debug text");
+    info("info text");
+    warn("warning text");
+    error("error text");
+    fatal("fatal text");
+}

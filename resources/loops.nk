@@ -1,0 +1,31 @@
+loop_test: func(array: u32[]) {
+    for i := 0; i < array.len; i++ {
+        println(array[i]);
+    }
+
+    for value := array {
+        println(value);
+    }
+
+    // From 0 inclusive to 3 inclusive.
+    for value := array[0=.=3] {
+        println(value);
+    }
+
+    // From 0 inclusive to 3 exclusive.
+    for value := array[0=..3] {
+        println(value);
+    }
+
+    // From 0 exclusive to 3 inclusive.
+    for value := array[0..=3] {
+        println(value);
+    }
+
+    // From 0 exclusive to 3 exclusive.
+    for value := array[0...3] {
+        println(value);
+    }
+
+    // TODO: Expand with step array slicing. Check c# linq.
+}
