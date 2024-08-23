@@ -1,0 +1,15 @@
+function: func() {}
+
+function_with_return_value: u32() {
+    return 5;
+}
+
+function_with_early_return: func()! {
+    early_return()!;
+    println(5);
+}
+
+function_with_return_value_and_early_return: u32()! {
+    early_return()!;
+    return 5;
+}

@@ -1,0 +1,32 @@
++my_type: type {
+    // Public Getter and private Setter parameter 
+    my_parameter: u32 { +get }
+
+    // Public Getter and public Setter parameter 
+    my_parameter: u32 { +get, +set }
+
+    // Custom public Getter and public Setter parameter
+    my_parameter: u32 {
+        +get(self: u32) { return self + 5; },
+        +set(self: u32, value: u32) {
+            self = value + 1;
+        }
+    }
+
+    // Custom public Getter and private Setter parameter
+    my_parameter: u32 {
+        +get(self: u32) { return self + 5; },
+        set(self: u32, value: u32) {
+            self = value + 1;
+        }
+    }
+
+    private_parameter: u32;
+    // Custom Getter and Setter for a specific parameter
+    my_parameter: private_parameter {
+        +get(self: u32) { return self; },
+        +set(self: u32, value: u32) {
+            self = value + 1;
+        }
+    }
+}

@@ -5,9 +5,9 @@ string_handling: func() {
     }
     {
         // Mutable string;
-        my_string: mut str = "mutable string";
-        my_string += "more string" +
-                     "even more string";
+        my_string: mut str = "mutable string\n";
+        my_string += "more string\n" +
+                     "even more string\n";
     }
     {
         // TODO: Expand with more formatting options.

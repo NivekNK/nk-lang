@@ -1,0 +1,96 @@
+// Private type, can only by accessed by this file
+my_class: type {}
+
+// Public type, can be accessed by files that import this file
++my_public_class: type {}
+
++my_type: type {
+    // Contructor like, this is not called when a class is created but after
+    // It can be called exactly after a type is created or later when is neccesary
+    // Explicitly called
+    new(self: class) { return self; }
+
+    // You can override the default new with new parameters
+    // Explicitly called
+    new(self: class, public_parameter: u32) {
+        self.public_parameter = public_parameter;
+        return self;
+    }
+
+    // Destructor like, this is not called when a class i destroyed but before
+    // It can be called exactly before a type is destroyed or before when is neccesary
+    // Always called if not a pointer
+    destroy(self: class) {}
+
+    // Public function inside a type
+    +public_function: func() {}
+
+    // Private function inside a type
+    private_function: func() {}
+
+    // Public parameter inside a type
+    +public_parameter: u32;
+
+    // Private parameter inside a type
+    private_parameter: u32;
+}
+
+example: func() {
+    {
+        // Default initialized type
+        new_type: my_type;
+
+        new_type.public_function();
+        println(new_type.public_parameter); // 0
+
+        // Implicit destroy call
+    }
+    {
+        // Default initialized type
+        new_type: my_type = my_type();
+
+        new_type.public_function();
+        println(new_type.public_parameter); // 0
+
+        // Implicit destroy call
+    }
+    {
+        // New initialized type
+        new_type: my_type = new_type.new(5);
+
+        new_type.public_function();
+        println(new_type.public_parameter); // 5
+
+        new_type.destroy(); // Explicit destroy call
+    }
+    {
+        new_type: my_type*;
+        new_type.public_function(); // Error null pointer
+    }
+    {
+        // Default initialized type
+        new_type: my_type* = my_type();
+
+        new_type.public_function();
+        new_type.public_function();
+        println(new_type.public_parameter); // 0
+
+        new_type.destroy();
+    }
+    {
+        // New initialized type
+        new_type: my_type* = new_type.new(5);
+
+        new_type.public_function();
+        println(new_type.public_parameter); // 5
+
+        new_type.destroy();
+    }
+    {
+        new_type: my_type = new_type.new(78);
+        defer new_type.destroy(); // Call destroy at the end of the scope
+
+        new_type.public_function();
+        println(new_type.public_parameter); // 78
+    }
+}

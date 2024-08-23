@@ -1,0 +1,25 @@
+// Simple main
+main: func() {
+    println("Hello world!");
+}
+
+// Simple main with not handled error, so early return
+main: func()! {
+    error_early_return()!;
+}
+
+// Main with arguments
+main: func(args: str[]) {
+    for i := 0; i < args.len; i++ {
+        println(args[i]);
+    }
+}
+
+// Main with arguments with not handled error, so early return
+main: func(args: str[])! {
+    error_early_return()!;
+
+    for arg := args {
+        println(arg);
+    }
+}

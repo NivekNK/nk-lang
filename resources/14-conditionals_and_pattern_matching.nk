@@ -1,0 +1,22 @@
+example: u32(bool_value: bool) !std::error {
+    if bool_value {
+        return std::error::runtime;
+    }
+    return 5;
+}
+
+function: func() {
+    switch(example(true)) {
+        .default(value) {
+            break;
+        }
+        .runtime(value) {
+            println("Runtime error");
+            break;
+        }
+        .ok(value) {
+            println();
+            break;
+        }
+    }
+}
